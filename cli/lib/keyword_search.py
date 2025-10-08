@@ -1,7 +1,8 @@
 import string
 from .search_utils import (
     DEFAULT_SEARCH_LIMIT,
-    load_movies
+    load_movies,
+    load_stopwords
 )
 
 
@@ -9,13 +10,13 @@ def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
     movies = load_movies()
     results = []
 
-    query_tokens = set(_tokenize(query))
+    query_tokens = _tokenize(query)
     if not query_tokens:
         return results
     
     for movie in movies:
-        title_tokens = set(_tokenize(movie["title"]))
-        if query_tokens & title_tokens:
+        title_tokens = _tokenize(movie["title"])
+        if _has_substring_match(query_tokens, title_tokens):
             results.append(movie)
             if len(results) >= limit:
                 break
@@ -30,4 +31,13 @@ def _preprocess_text(text: str) -> str:
 
 
 def _tokenize(s: str) -> list[str]:
-    return [t for t in _preprocess_text(s).split() if t]
+    stopwords = load_stopwords()
+    return [t for t in _preprocess_text(s).split() if t not in stopwords]
+
+
+def _has_substring_match(q_tokens: list[str], t_tokens: list[str]) -> bool:
+    for qt in q_tokens:
+        for tt in t_tokens:
+            if qt in tt:
+                return True
+    return False
