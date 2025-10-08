@@ -1,9 +1,15 @@
 import string
+from nltk.stem import PorterStemmer
+from functools import lru_cache
 from .search_utils import (
     DEFAULT_SEARCH_LIMIT,
     load_movies,
     load_stopwords
 )
+
+
+TRANSLATOR = str.maketrans("", "", string.punctuation)
+STEMMER = PorterStemmer()
 
 
 def search_command(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> list[dict]:
@@ -31,8 +37,8 @@ def _preprocess_text(text: str) -> str:
 
 
 def _tokenize(s: str) -> list[str]:
-    stopwords = load_stopwords()
-    return [t for t in _preprocess_text(s).split() if t not in stopwords]
+    sw = _stopwords_set()
+    return [STEMMER.stem(t) for t in _preprocess_text(s).split() if t and STEMMER.stem(t) not in sw]
 
 
 def _has_substring_match(q_tokens: list[str], t_tokens: list[str]) -> bool:
@@ -41,3 +47,9 @@ def _has_substring_match(q_tokens: list[str], t_tokens: list[str]) -> bool:
             if qt in tt:
                 return True
     return False
+
+
+@lru_cache(maxsize=1)
+def _stopwords_set() -> set[str]:
+    words = load_stopwords()
+    return {STEMMER.stem(_preprocess_text(w)) for w in words if w}
