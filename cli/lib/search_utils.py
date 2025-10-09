@@ -7,6 +7,7 @@ DEFAULT_SEARCH_LIMIT = 5
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_PATH = PROJECT_ROOT / "data" / "movies.json"
 STOPWORDS_PATH = PROJECT_ROOT / "data" / "stopwords.txt"
+CACHE_DIR = Path("cache")
 
 
 
