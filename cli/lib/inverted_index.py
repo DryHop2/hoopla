@@ -11,11 +11,15 @@ from .search_utils import (
 
 
 class InvertedIndex:
+    cache_dir = CACHE_DIR
+
+    
     def __init__(self) -> None:
         self.index: Dict[str, Set[int]] = {}
         self.docmap: Dict[int, dict] = {}
 
         self._translator = str.maketrans("", "", string.punctuation)
+        self._stemmer = PorterStemmer()
     
 
     def __add_document(self, doc_id: int, text: str) -> None:
@@ -44,14 +48,21 @@ class InvertedIndex:
 
 
     def save(self) -> None:
-        cache_dir = CACHE_DIR
-        cache_dir.mkdir(parents=True, exist_ok=True)
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-        with (cache_dir / "index.pkl").open("wb") as f:
+        with (CACHE_DIR / "index.pkl").open("wb") as f:
             pickle.dump(self.index, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with (cache_dir / "docmap.pkl").open("wb") as f:
+        with (CACHE_DIR / "docmap.pkl").open("wb") as f:
             pickle.dump(self.docmap, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+    def load(self) -> None:
+        with (CACHE_DIR / "index.pkl").open("rb") as f:
+            self.index = pickle.load(f)
+
+        with (CACHE_DIR / "docmap.pkl").open("rb") as f:
+            self.docmap = pickle.load(f)
 
 
     def _normalize(self, s: str) -> str:
@@ -59,4 +70,5 @@ class InvertedIndex:
     
 
     def _tokenize(self, s: str) -> List[str]:
-        return [t for t in self._normalize(s).split() if t]
+        tokens = [t for t in self._normalize(s).split() if t]
+        return [self._stemmer.stem(t) for t in tokens]

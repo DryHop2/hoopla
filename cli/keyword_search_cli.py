@@ -22,17 +22,13 @@ def main() -> None:
 
     match args.command:
         case "search":
-            print(f"Searching for: {args.query}")
             results = search_command(args.query)
             for i, res in enumerate(results, 1):
-                print(f"{i}. ({res['id']}) {res["title"]}")
+                print(f"{i}. ({res['id']}) {res['title']}")
         case "build":
             idx = InvertedIndex()
             idx.build()
             idx.save()
-            docs = idx.get_documents("merida")
-
-            print(f"First document token for 'merida' = {docs[0] if docs else None}")
         case _:
             parser.print_help()
 
