@@ -18,7 +18,6 @@ def load_movies() -> list[dict]:
     return data["movies"]
 
 
-@lru_cache(maxsize=1)
 def load_stopwords() -> list:
     with STOPWORDS_PATH.open("r") as f:
         stopwords = f.read()

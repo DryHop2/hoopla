@@ -1,11 +1,12 @@
 from nltk.stem import PorterStemmer
 from typing import Dict, Set, List
-from pathlib import Path
+from functools import lru_cache
 import string
 import pickle
 
 from .search_utils import (
     load_movies,
+    load_stopwords,
     CACHE_DIR
 )
 
@@ -23,19 +24,13 @@ class InvertedIndex:
     
 
     def __add_document(self, doc_id: int, text: str) -> None:
-        tokens = self._tokenize(text)
-        for tok in tokens:
-            bucket = self.index.get(tok)
-            if bucket is None:
-                bucket = self.index[tok] = set()
-            bucket.add(doc_id)
+        for token in self._tokenize(text):
+            self.index.setdefault(token, set()).add(doc_id)
 
 
     def get_documents(self, term: str) -> List[int]:
-        norm = self._normalize(term)
-        ids = self.index.get(norm, set())
-        
-        return sorted(ids)
+        norm = self._stemmer.stem(self._normalize(term))
+        return sorted(self.index.get(norm, set()))
     
 
     def build(self) -> None:
@@ -70,5 +65,17 @@ class InvertedIndex:
     
 
     def _tokenize(self, s: str) -> List[str]:
-        tokens = [t for t in self._normalize(s).split() if t]
-        return [self._stemmer.stem(t) for t in tokens]
+        sw = self._stopwords_set()
+        out: List[str] = []
+        for t in self._normalize(s).split():
+            if not t:
+                continue
+            st = self._stemmer.stem(t)
+            if st not in sw:
+                out.append(st)
+        return out
+    
+
+    @lru_cache(maxsize=1)
+    def _stopwords_set(self) -> set[str]:
+        return {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
