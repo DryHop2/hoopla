@@ -1,6 +1,5 @@
 from nltk.stem import PorterStemmer
 from typing import Dict, Set, List
-from functools import lru_cache
 import string
 import pickle
 
@@ -19,10 +18,11 @@ class InvertedIndex:
         self.index: Dict[str, Set[int]] = {}
         self.docmap: Dict[int, dict] = {}
 
-        self._translator = str.maketrans("", "", string.punctuation)
         self._stemmer = PorterStemmer()
+        self._translator = str.maketrans("", "", string.punctuation)
+        self._stopwords = {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
+        
     
-
     def __add_document(self, doc_id: int, text: str) -> None:
         for token in self._tokenize(text):
             self.index.setdefault(token, set()).add(doc_id)
@@ -65,17 +65,11 @@ class InvertedIndex:
     
 
     def _tokenize(self, s: str) -> List[str]:
-        sw = self._stopwords_set()
         out: List[str] = []
         for t in self._normalize(s).split():
             if not t:
                 continue
             st = self._stemmer.stem(t)
-            if st not in sw:
+            if st not in self._stopwords:
                 out.append(st)
         return out
-    
-
-    @lru_cache(maxsize=1)
-    def _stopwords_set(self) -> set[str]:
-        return {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
