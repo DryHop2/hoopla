@@ -1,6 +1,7 @@
 from nltk.stem import PorterStemmer
 from typing import Dict, Set, List
 from pathlib import Path
+from collections import Counter
 import string
 import pickle
 
@@ -12,22 +13,24 @@ from .search_utils import (
 
 
 class InvertedIndex:
-    cache_dir = CACHE_DIR
-
-    
     def __init__(self, cache_dir: Path | None = None) -> None:
         self.cache_dir = cache_dir or CACHE_DIR
         self.index: Dict[str, Set[int]] = {}
         self.docmap: Dict[int, dict] = {}
+        self.term_frequencies: Dict[int, Counter[str]] = {}
 
         self._stemmer = PorterStemmer()
         self._translator = str.maketrans("", "", string.punctuation)
         self._stopwords = {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
         
     
-    def _add_document(self, doc_id: int, text: str) -> None:
+    def __add_document(self, doc_id: int, text: str) -> None:
+        if doc_id not in self.term_frequencies:
+            self.term_frequencies[doc_id] = Counter()
+
         for token in self._tokenize(text):
             self.index.setdefault(token, set()).add(doc_id)
+            self.term_frequencies[doc_id][token] += 1
 
 
     def get_documents(self, term: str) -> List[int]:
@@ -53,6 +56,9 @@ class InvertedIndex:
         with (self.cache_dir / "docmap.pkl").open("wb") as f:
             pickle.dump(self.docmap, f, protocol=pickle.HIGHEST_PROTOCOL)
 
+        with (self.cache_dir / "term_frequencies.pkl").open("wb") as f:
+            pickle.dump(self.term_frequencies, f, protocol=pickle.HIGHEST_PROTOCOL)
+
 
     def load(self) -> None:
         with (self.cache_dir / "index.pkl").open("rb") as f:
@@ -60,6 +66,13 @@ class InvertedIndex:
 
         with (self.cache_dir / "docmap.pkl").open("rb") as f:
             self.docmap = pickle.load(f)
+
+        tf_path = self.cache_dir / "term_frequencies.pkl"
+        if tf_path.exists():
+            with tf_path.open("rb") as f:
+                self.term_frequencies = pickle.load(f)
+        else:
+            self.term_frequencies = {}
 
 
     def _normalize(self, s: str) -> str:
@@ -75,3 +88,12 @@ class InvertedIndex:
             if st not in self._stopwords:
                 out.append(st)
         return out
+    
+
+    def get_tf(self, doc_id: int, term: str) -> int:
+        tokens = self._tokenize(term)
+        if len(tokens) != 1:
+            raise ValueError("Term must tokenize to exactly one token")
+        token = tokens[0]
+
+        return self.term_frequencies.get(doc_id, {}).get(token, 0)
