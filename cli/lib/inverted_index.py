@@ -1,5 +1,6 @@
 from nltk.stem import PorterStemmer
 from typing import Dict, Set, List
+from pathlib import Path
 import string
 import pickle
 
@@ -14,7 +15,8 @@ class InvertedIndex:
     cache_dir = CACHE_DIR
 
     
-    def __init__(self) -> None:
+    def __init__(self, cache_dir: Path | None = None) -> None:
+        self.cache_dir = cache_dir or CACHE_DIR
         self.index: Dict[str, Set[int]] = {}
         self.docmap: Dict[int, dict] = {}
 
@@ -23,7 +25,7 @@ class InvertedIndex:
         self._stopwords = {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
         
     
-    def __add_document(self, doc_id: int, text: str) -> None:
+    def _add_document(self, doc_id: int, text: str) -> None:
         for token in self._tokenize(text):
             self.index.setdefault(token, set()).add(doc_id)
 
@@ -43,20 +45,20 @@ class InvertedIndex:
 
 
     def save(self) -> None:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        with (CACHE_DIR / "index.pkl").open("wb") as f:
+        with (self.cache_dir / "index.pkl").open("wb") as f:
             pickle.dump(self.index, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        with (CACHE_DIR / "docmap.pkl").open("wb") as f:
+        with (self.cache_dir / "docmap.pkl").open("wb") as f:
             pickle.dump(self.docmap, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
     def load(self) -> None:
-        with (CACHE_DIR / "index.pkl").open("rb") as f:
+        with (self.cache_dir / "index.pkl").open("rb") as f:
             self.index = pickle.load(f)
 
-        with (CACHE_DIR / "docmap.pkl").open("rb") as f:
+        with (self.cache_dir / "docmap.pkl").open("rb") as f:
             self.docmap = pickle.load(f)
 
 
