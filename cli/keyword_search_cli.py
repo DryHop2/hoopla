@@ -9,6 +9,16 @@ from lib.inverted_index import (
 )
 
 
+def load_index_or_die() -> InvertedIndex:
+    idx = InvertedIndex()
+    try:
+        idx.load()
+    except FileNotFoundError:
+        print("Error: No cached index found. Please run 'build' first.")
+        raise
+    return idx
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -22,6 +32,9 @@ def main() -> None:
     tf_parser.add_argument("doc_id", type=int, help="Document ID")
     tf_parser.add_argument("term", type=str, help="Search term")
 
+    idf_parser = subparsers.add_parser("idf", help="Get inverted frequency score for a term")
+    idf_parser.add_argument("term", type=str, help="Search term")
+
     args = parser.parse_args()
 
     match args.command:
@@ -34,18 +47,20 @@ def main() -> None:
             idx.build()
             idx.save()
         case "tf":
-            idx = InvertedIndex()
             try:
-                idx.load()
+                idx = load_index_or_die()
             except FileNotFoundError:
-                print("Error: No cached index found. Please fun 'build' first.")
+                return
+            print(idx.get_tf(args.doc_id, args.term))
+        case "idf":
+            try:
+                idx = load_index_or_die()
+            except FileNotFoundError:
                 return
             
-            tf_value = idx.get_tf(args.doc_id, args.term)
-            print(tf_value)
+            print(f"Inverse document frequency of '{args.term}': {idx.get_idf(args.term):.2f}")
         case _:
             parser.print_help()
-
 
 
 if __name__ == "__main__":

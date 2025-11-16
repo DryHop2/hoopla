@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import Counter
 import string
 import pickle
+import math
 
 from .search_utils import (
     load_movies,
@@ -97,3 +98,9 @@ class InvertedIndex:
         token = tokens[0]
 
         return self.term_frequencies.get(doc_id, {}).get(token, 0)
+    
+
+    def get_idf(self, term: str) -> float:
+        doc_count = len(self.docmap)
+        term_doc_count = len(self.get_documents(term))
+        return math.log((doc_count + 1) / (term_doc_count + 1))
