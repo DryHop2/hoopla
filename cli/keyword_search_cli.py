@@ -19,6 +19,15 @@ def load_index_or_die() -> InvertedIndex:
     return idx
 
 
+def add_doc_term_args(p):
+    p.add_argument("doc_id", type=int, help="Document ID")
+    p.add_argument("term", type=str, help="Search term")
+
+
+def add_term_arg(p):
+    p.add_argument("term", type=str, help="Search term")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Keyword Search CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -29,11 +38,13 @@ def main() -> None:
     search_parser.add_argument("query", type=str, help="Search query")
 
     tf_parser = subparsers.add_parser("tf", help="Get term frequency for a document")
-    tf_parser.add_argument("doc_id", type=int, help="Document ID")
-    tf_parser.add_argument("term", type=str, help="Search term")
+    add_doc_term_args(tf_parser)
 
-    idf_parser = subparsers.add_parser("idf", help="Get inverted frequency score for a term")
-    idf_parser.add_argument("term", type=str, help="Search term")
+    idf_parser = subparsers.add_parser("idf", help="Get inverse frequency for a term")
+    add_term_arg(idf_parser)
+
+    tfidf_parser = subparsers.add_parser("tfidf", help="Get TF-IDF score")
+    add_doc_term_args(tfidf_parser)
 
     args = parser.parse_args()
 
@@ -59,6 +70,13 @@ def main() -> None:
                 return
             
             print(f"Inverse document frequency of '{args.term}': {idx.get_idf(args.term):.2f}")
+        case "tfidf":
+            try:
+                idx = load_index_or_die()
+            except FileNotFoundError:
+                return
+            
+            print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {idx.get_tfidf(args.doc_id, args.term):.2f}")
         case _:
             parser.print_help()
 
