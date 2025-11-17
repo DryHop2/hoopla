@@ -8,7 +8,8 @@ from lib.inverted_index import (
     InvertedIndex
 )
 from lib.search_utils import (
-    BM25_K1
+    BM25_K1,
+    BM25_B
 )
 
 
@@ -54,7 +55,8 @@ def main() -> None:
 
     bm25_tf_parser = subparsers.add_parser("bm25tf", help="Get BM25 TF score for a given document ID and term")
     add_doc_term_args(bm25_tf_parser)
-    bm25_tf_parser.add_argument("k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 K1 parameter")
+    bm25_tf_parser.add_argument("k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 K1 parameter [default = 1.5]")
+    bm25_tf_parser.add_argument("b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b paramater [default = 0.75]")
 
     args = parser.parse_args()
 
@@ -101,7 +103,7 @@ def main() -> None:
             except FileNotFoundError:
                 return
             
-            bm25tf = idx.get_bm25_tf(args.doc_id, args.term, args.k1)
+            bm25tf = idx.get_bm25_tf(args.doc_id, args.term, args.k1, args.b)
             print(f"BM25 TF score of '{args.term}': {bm25tf:.2f}")
         case _:
             parser.print_help()

@@ -10,7 +10,8 @@ from .search_utils import (
     load_movies,
     load_stopwords,
     CACHE_DIR,
-    BM25_K1
+    BM25_K1,
+    BM25_B
 )
 
 
@@ -20,17 +21,21 @@ class InvertedIndex:
         self.index: Dict[str, Set[int]] = {}
         self.docmap: Dict[int, dict] = {}
         self.term_frequencies: Dict[int, Counter[str]] = {}
+        self.doc_lengths: Dict[int, int] = {}
 
         self._stemmer = PorterStemmer()
         self._translator = str.maketrans("", "", string.punctuation)
         self._stopwords = {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
         
     
-    def __add_document(self, doc_id: int, text: str) -> None:
+    def _add_document(self, doc_id: int, text: str) -> None:
         if doc_id not in self.term_frequencies:
             self.term_frequencies[doc_id] = Counter()
 
-        for token in self._tokenize(text):
+        tokens = self._tokenize(text)
+        self.doc_lengths[doc_id] = len(tokens)
+
+        for token in tokens:
             self.index.setdefault(token, set()).add(doc_id)
             self.term_frequencies[doc_id][token] += 1
 
@@ -46,7 +51,7 @@ class InvertedIndex:
             doc_id = int(m["id"])
             self.docmap[doc_id] = m
             text = f"{m.get('title', '')} {m.get('description', '')}"
-            self.__add_document(doc_id, text)
+            self._add_document(doc_id, text)
 
 
     def save(self) -> None:
@@ -60,6 +65,9 @@ class InvertedIndex:
 
         with (self.cache_dir / "term_frequencies.pkl").open("wb") as f:
             pickle.dump(self.term_frequencies, f, protocol=pickle.HIGHEST_PROTOCOL)
+
+        with (self.cache_dir / "doc_lengths.pkl").open("wb") as f:
+            pickle.dump(self.doc_lengths, f, protocol=pickle.HIGHEST_PROTOCOL)
 
 
     def load(self) -> None:
@@ -75,6 +83,13 @@ class InvertedIndex:
                 self.term_frequencies = pickle.load(f)
         else:
             self.term_frequencies = {}
+
+        doc_lengths_path = self.cache_dir / "doc_lengths.pkl"
+        if doc_lengths_path.exists():
+            with doc_lengths_path.open("rb") as f:
+                self.doc_lengths = pickle.load(f)
+        else:
+            self.doc_lengths = {}
 
 
     def _normalize(self, s: str) -> str:
@@ -124,9 +139,23 @@ class InvertedIndex:
         return bm25
     
 
-    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1) -> float:
+    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1, b: float = BM25_B) -> float:
         tf = self.get_tf(doc_id, term)
         if tf == 0:
             return 0.0
-        sat_tf = (tf * (k1 + 1)) / (tf + k1)
+        
+        avgdl = self._get_avg_doc_length()
+        if avgdl == 0:
+            return 0.0
+        doc_len = self.doc_lengths.get(doc_id, 0)
+
+        length_norm = 1 - b + b * (doc_len / avgdl)
+        sat_tf = (tf * (k1 + 1)) / (tf + k1 * length_norm)
         return sat_tf
+    
+
+    def _get_avg_doc_length(self) -> float:
+        total_docs = len(self.doc_lengths)
+        if total_docs == 0:
+            return 0.0
+        return sum(self.doc_lengths.values()) / total_docs
