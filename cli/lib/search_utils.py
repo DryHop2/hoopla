@@ -3,6 +3,7 @@ from pathlib import Path
 from functools import lru_cache
 
 DEFAULT_SEARCH_LIMIT = 5
+BM25_K1 = 1.5
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_PATH = PROJECT_ROOT / "data" / "movies.json"

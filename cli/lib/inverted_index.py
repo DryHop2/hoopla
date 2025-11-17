@@ -9,7 +9,8 @@ import math
 from .search_utils import (
     load_movies,
     load_stopwords,
-    CACHE_DIR
+    CACHE_DIR,
+    BM25_K1
 )
 
 
@@ -121,3 +122,11 @@ class InvertedIndex:
         df = len(self.get_documents(token))
         bm25 = math.log((doc_count - df + 0.5) / (df + 0.5) + 1)
         return bm25
+    
+
+    def get_bm25_tf(self, doc_id: int, term: str, k1: float = BM25_K1) -> float:
+        tf = self.get_tf(doc_id, term)
+        if tf == 0:
+            return 0.0
+        sat_tf = (tf * (k1 + 1)) / (tf + k1)
+        return sat_tf
