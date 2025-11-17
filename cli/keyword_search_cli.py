@@ -46,6 +46,9 @@ def main() -> None:
     tfidf_parser = subparsers.add_parser("tfidf", help="Get TF-IDF score")
     add_doc_term_args(tfidf_parser)
 
+    bm25_idf_parser = subparsers.add_parser("bm25idf", help="Get BM25 IDF score for given term")
+    add_term_arg(bm25_idf_parser)
+
     args = parser.parse_args()
 
     match args.command:
@@ -77,6 +80,14 @@ def main() -> None:
                 return
             
             print(f"TF-IDF score of '{args.term}' in document '{args.doc_id}': {idx.get_tfidf(args.doc_id, args.term):.2f}")
+        case "bm25idf":
+            try:
+                idx = load_index_or_die()
+            except FileNotFoundError:
+                return
+            
+            bm25 = idx.get_bm25_idf(args.term)
+            print(f"BM25 IDF score of '{args.term}': {bm25:.2f}")
         case _:
             parser.print_help()
 

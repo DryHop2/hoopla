@@ -110,3 +110,14 @@ class InvertedIndex:
         tf = self.get_tf(doc_id, term)
         idf = self.get_idf(term)
         return tf * idf
+    
+
+    def get_bm25_idf(self, term: str) -> float:
+        tokens = self._tokenize(term)
+        if len(tokens) != 1:
+            raise ValueError("Term must tokenize to exactly one token")
+        token = tokens[0]
+        doc_count = len(self.docmap)
+        df = len(self.get_documents(token))
+        bm25 = math.log((doc_count - df + 0.5) / (df + 0.5) + 1)
+        return bm25
