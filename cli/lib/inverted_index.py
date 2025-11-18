@@ -1,5 +1,5 @@
 from nltk.stem import PorterStemmer
-from typing import Dict, Set, List
+from typing import Dict, Set, List, Tuple
 from pathlib import Path
 from collections import Counter
 import string
@@ -26,8 +26,9 @@ class InvertedIndex:
 
         self._stemmer = PorterStemmer()
         self._translator = str.maketrans("", "", string.punctuation)
-        self._stopwords = {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
-        
+        # self._stopwords = {self._stemmer.stem(self._normalize(w)) for w in load_stopwords() if w}
+        self._stopwords = set(load_stopwords())
+
     
     def _add_document(self, doc_id: int, text: str) -> None:
         if doc_id not in self.term_frequencies:
@@ -42,8 +43,8 @@ class InvertedIndex:
 
 
     def get_documents(self, term: str) -> List[int]:
-        norm = self._stemmer.stem(self._normalize(term))
-        return sorted(self.index.get(norm, set()))
+        doc_ids = self.index.get(term, set())
+        return sorted(doc_ids)
     
 
     def build(self) -> None:
@@ -98,13 +99,17 @@ class InvertedIndex:
     
 
     def _tokenize(self, s: str) -> List[str]:
+        text = self._normalize(s)
+        tokens = text.split()
+
+        valid_tokens = [t for t in tokens if t]
+
+        filtered = [t for t in valid_tokens if t not in self._stopwords]
+        
         out: List[str] = []
-        for t in self._normalize(s).split():
-            if not t:
-                continue
-            st = self._stemmer.stem(t)
-            if st not in self._stopwords:
-                out.append(st)
+        for word in filtered:
+            out.append(self._stemmer.stem(word))
+            
         return out
     
 
@@ -167,7 +172,7 @@ class InvertedIndex:
         return bm25
     
 
-    def bm25_search(self, query: str, limit: int = LIMIT) -> Dict[int, int]:
+    def bm25_search(self, query: str, limit: int = LIMIT) -> List[Tuple[int, int]]:
         tokens = self._tokenize(query)
         if not tokens:
             return {}
