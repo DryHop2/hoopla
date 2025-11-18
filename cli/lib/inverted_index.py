@@ -11,7 +11,8 @@ from .search_utils import (
     load_stopwords,
     CACHE_DIR,
     BM25_K1,
-    BM25_B
+    BM25_B,
+    LIMIT
 )
 
 
@@ -159,3 +160,28 @@ class InvertedIndex:
         if total_docs == 0:
             return 0.0
         return sum(self.doc_lengths.values()) / total_docs
+    
+
+    def bm25(self, doc_id: int, term: str) -> float:
+        bm25 = self.get_bm25_idf(term) * self.get_bm25_tf(doc_id, term)
+        return bm25
+    
+
+    def bm25_search(self, query: str, limit: int = LIMIT) -> Dict[int, int]:
+        tokens = self._tokenize(query)
+        if not tokens:
+            return {}
+        
+        scores: Dict[int, float] = {}
+
+        candidate_docs: set[int] = set()
+        for token in tokens:
+            candidate_docs.update(self.get_documents(token))
+
+        for doc_id in candidate_docs:
+            total = 0.0
+            for token in tokens:
+                total += self.bm25(doc_id, token)
+            scores[doc_id] = total
+
+        return sorted(scores.items(), key=lambda x: x[1], reverse=True)[:limit]

@@ -9,7 +9,8 @@ from lib.inverted_index import (
 )
 from lib.search_utils import (
     BM25_K1,
-    BM25_B
+    BM25_B,
+    LIMIT
 )
 
 
@@ -58,6 +59,10 @@ def main() -> None:
     bm25_tf_parser.add_argument("k1", type=float, nargs="?", default=BM25_K1, help="Tunable BM25 K1 parameter [default = 1.5]")
     bm25_tf_parser.add_argument("b", type=float, nargs="?", default=BM25_B, help="Tunable BM25 b paramater [default = 0.75]")
 
+    bm25search_parser = subparsers.add_parser("bm25search", help="Search movies using full BM25 scoring")
+    bm25search_parser.add_argument("query", type=str, help="Search query")
+    bm25search_parser.add_argument("limit", type=int, nargs="?", default=LIMIT, help="Number of documents to return [default=5]")
+    
     args = parser.parse_args()
 
     match args.command:
@@ -105,6 +110,17 @@ def main() -> None:
             
             bm25tf = idx.get_bm25_tf(args.doc_id, args.term, args.k1, args.b)
             print(f"BM25 TF score of '{args.term}': {bm25tf:.2f}")
+        case "bm25search":
+            try:
+                idx = load_index_or_die()
+            except FileNotFoundError:
+                return
+            
+            results = idx.bm25_search(args.query, args.limit)
+
+            for i, (doc_id, score) in enumerate(results, 1):
+                movie = idx.docmap[doc_id]
+                print(f"{i}. ({doc_id}) {movie['title']} - Score: {score:.2f}")
         case _:
             parser.print_help()
 
