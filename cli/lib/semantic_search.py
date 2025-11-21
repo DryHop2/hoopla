@@ -1,8 +1,9 @@
 from sentence_transformers import SentenceTransformer
-from typing import Dict, Set, List, Tuple, Any
+from typing import Any
 from pathlib import Path
 from lib.search_utils import (
     CACHE_DIR,
+    LIMIT,
     load_movies
 )
 import numpy as np
@@ -42,13 +43,24 @@ def embed_query_text(query: str) -> None:
     print(f"Shaep: {embedding.shape}")
 
 
+def cosine_similarity(vec1, vec2: list[float]) -> float:
+    dot_product = np.dot(vec1, vec2)
+    norm1 = np.linalg.norm(vec1)
+    norm2 = np.linalg.norm(vec2)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0.0
+    
+    return dot_product / (norm1 * norm2)
+
+
 class SemanticSearch:
     def __init__(self, cache_dir: Path | None = None) -> None:
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
         self.cache_dir = cache_dir or CACHE_DIR
         self.embeddings: np.ndarray | None = None
-        self.documents: List[Dict[str, Any]] | None = None
-        self.document_map: Dict[int, Dict[str, Any]] = {}
+        self.documents: list[dict[str, Any]] | None = None
+        self.document_map: dict[int, dict[str, Any]] = {}
 
 
     def __repr__(self) -> str:
@@ -63,7 +75,7 @@ class SemanticSearch:
         return embedding[0]
     
 
-    def build_embeddings(self, documents: List[Dict[str, Any]]) -> np.ndarray:
+    def build_embeddings(self, documents: list[dict[str, Any]]) -> np.ndarray:
         self.documents = documents
         self.document_map = {doc["id"]: doc for doc in self.documents}
 
@@ -75,7 +87,7 @@ class SemanticSearch:
         return self.embeddings
     
 
-    def load_or_create_embeddings(self, documents: List[Dict[str, Any]]) -> np.ndarray:
+    def load_or_create_embeddings(self, documents: list[dict[str, Any]]) -> np.ndarray:
         self.documents = documents
         self.document_map = {doc["id"]: doc for doc in self.documents}
 
@@ -86,3 +98,26 @@ class SemanticSearch:
                 return self.embeddings
         
         return self.build_embeddings(documents)
+    
+
+    def search(self, query: str, limit: int = LIMIT) -> list[dict[str, Any]]:
+        if self.embeddings is None:
+            raise ValueError("No embeddings loaded. Call 'load_or_create_embeddings' first.")
+        
+        query_embedding = self.generate_embedding(query)
+        similarity_scores: list[tuple] = []
+        for i, doc_embedding in enumerate(self.embeddings):
+            score = cosine_similarity(query_embedding, doc_embedding)
+            similarity_scores.append((score, self.documents[i]))
+
+        similarity_scores.sort(key=lambda x: x[0], reverse=True)
+
+        results = []
+        for score, doc in similarity_scores[:limit]:
+            results.append({
+                "score": float(score),
+                "title": doc["title"],
+                "description": doc["description"],
+            })
+
+        return results
