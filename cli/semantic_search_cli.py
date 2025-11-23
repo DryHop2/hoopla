@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import re
 from lib.semantic_search import (
     SemanticSearch,
     verify_model,
@@ -37,6 +38,11 @@ def main():
     chunk_parser.add_argument("--chunk-size", type=int, nargs="?", default=CHUNK_SIZE, help="Chunk size [default:200]")
     chunk_parser.add_argument("--overlap", type=int, nargs="?", default=0, help="Number of words to overlap with previous chunk")
 
+    semantic_chunk = subparsers.add_parser("semantic_chunk", help="Chunk text using semantic parser")
+    semantic_chunk.add_argument("text", type=str, help="Text to be chunked")
+    semantic_chunk.add_argument("--max-chunk-size", type=int, nargs="?", default=4, help="Max sentences per chunk [default=4]")
+    semantic_chunk.add_argument("--overlap", type=int, nargs="?", default=0, help="Number of sentences to overlap")
+    
     args = parser.parse_args()
 
     match args.command:
@@ -75,7 +81,9 @@ def main():
 
                 while idx < n:
                     chunk = split_text[idx:idx + args.chunk_size]
-                    if not chunk or len(chunk) <= args.overlap:
+                    if not chunk:
+                        break
+                    if chunks and len(chunk) <= args.overlap:
                         break
                     chunks.append(chunk)
                     if len(chunk) < args.chunk_size:
@@ -83,6 +91,37 @@ def main():
                     idx += step
 
             print(f"Chunking {char_count} characters")
+            for idx, chunk in enumerate(chunks, start=1):
+                print(f"{idx}. {' '.join(chunk)}")
+        case "semantic_chunk":
+            char_count = len(args.text)
+            split_text = re.split(r"(?<=[.!?])\s+", args.text)
+            if args.overlap <= 0:
+                chunks = [
+                    split_text[i:i + args.max_chunk_size]
+                    for i in range(0, len(split_text), args.max_chunk_size)
+                ]
+            else:
+                chunks: list[list[str]] = []
+                step = args.max_chunk_size - args.overlap
+                if step <= 0:
+                    raise ValueError("--overlap must be smaller than --max-chunk-size")
+                
+                idx = 0
+                n = len(split_text)
+
+                while idx < n:
+                    chunk = split_text[idx:idx + args.max_chunk_size]
+                    if not chunk:
+                        break
+                    if chunks and len(chunk) <= args.overlap:
+                        break
+                    chunks.append(chunk)
+                    if len(chunk) < args.max_chunk_size:
+                        break
+                    idx += step
+
+            print(f"Semantically chunking {char_count} characters")
             for idx, chunk in enumerate(chunks, start=1):
                 print(f"{idx}. {' '.join(chunk)}")
         case _:
