@@ -12,7 +12,8 @@ from lib.semantic_search import (
 from lib.search_utils import (
     load_movies,
     DEFAULT_SEARCH_LIMIT,
-    DEFAULT_CHUNK_SIZE
+    DEFAULT_CHUNK_SIZE,
+    SCORE_PRECISION
 )
 from lib.semantic_search import (
     chunk_text_words,
@@ -50,6 +51,10 @@ def build_parser() -> argparse.ArgumentParser:
     semantic_chunk.add_argument("--max-chunk-size", type=int, nargs="?", default=4, help="Max sentences per chunk [default=4]")
     semantic_chunk.add_argument("--overlap", type=int, nargs="?", default=0, help="Number of sentences to overlap")
     
+    search_chunked = subparsers.add_parser("search_chunked", help="Search using chunked embeddings")
+    search_chunked.add_argument("query", type=str, help="Search string")
+    search_chunked.add_argument("--limit", type=int, nargs="?", default=DEFAULT_SEARCH_LIMIT, help="Number of movies to return [default:5]")
+
     return parser
 
 
@@ -79,6 +84,14 @@ def main() -> None:
             semantic = ChunkedSemanticSearch()
             embeddings = semantic.load_or_create_chunk_embeddings(movies)
             print(f"Generated {len(embeddings)} chunked embeddings")
+        case "search_chunked":
+            movies = load_movies()
+            semantic = ChunkedSemanticSearch()
+            embeddings = semantic.load_or_create_chunk_embeddings(movies)
+            results = semantic.search_chunks(args.query, args.limit)
+            for i, result in enumerate(results, start=1):
+                print(f"\n{i}. {result["title"]} (score: {result["score"]:.4f})")
+                print(f"   {result["document"]}...")
         case _:
             parser.print_help()
 
