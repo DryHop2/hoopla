@@ -105,7 +105,19 @@ def chunk_text_words(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE, overlap: i
 
 
 def chunk_text_sentences(text: str, max_chunk_size: int = DEFAULT_SEMANTIC_CHUNK_SIZE, overlap: int = DEFAULT_CHUNK_OVERLAP) -> list[list[str]]:
-    sentences = re.split(r"(?<=[.!?])\s+", text)
+    strip_text = text.strip()
+    if strip_text == "":
+        return []
+    
+    raw_sentences = re.split(r"(?<=[.!?])\s+", strip_text)
+
+    sentences = [s.strip() for s in raw_sentences if s.strip()]
+    if not sentences:
+        return []
+
+    if len(sentences) == 1 and not sentences[0].endswith(("?", ".", "!")):
+        return [sentences]
+    
     return overlapping_chunks(sentences, max_chunk_size, overlap)
 
 

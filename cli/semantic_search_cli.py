@@ -12,8 +12,7 @@ from lib.semantic_search import (
 from lib.search_utils import (
     load_movies,
     DEFAULT_SEARCH_LIMIT,
-    DEFAULT_CHUNK_SIZE,
-    SCORE_PRECISION
+    DEFAULT_CHUNK_SIZE
 )
 from lib.semantic_search import (
     chunk_text_words,
