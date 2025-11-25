@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import re
 from lib.semantic_search import (
     verify_model,
     embed_text,
@@ -86,11 +85,11 @@ def main() -> None:
         case "search_chunked":
             movies = load_movies()
             semantic = ChunkedSemanticSearch()
-            embeddings = semantic.load_or_create_chunk_embeddings(movies)
+            semantic.load_or_create_chunk_embeddings(movies)
             results = semantic.search_chunks(args.query, args.limit)
             for i, result in enumerate(results, start=1):
-                print(f"\n{i}. {result["title"]} (score: {result["score"]:.4f})")
-                print(f"   {result["document"]}...")
+                print(f"\n{i}. {result['title']} (score: {result['score']:.4f})")
+                print(f"   {result['document']}...")
         case _:
             parser.print_help()
 
