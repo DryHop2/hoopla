@@ -12,7 +12,7 @@ from .search_utils import (
     CACHE_DIR,
     BM25_K1,
     BM25_B,
-    LIMIT
+    DEFAULT_SEARCH_LIMIT
 )
 
 
@@ -172,7 +172,7 @@ class InvertedIndex:
         return bm25
     
 
-    def bm25_search(self, query: str, limit: int = LIMIT) -> List[Tuple[int, int]]:
+    def bm25_search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> List[Tuple[int, int]]:
         tokens = self._tokenize(query)
         if not tokens:
             return {}

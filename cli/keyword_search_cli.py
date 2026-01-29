@@ -10,7 +10,7 @@ from lib.inverted_index import (
 from lib.search_utils import (
     BM25_K1,
     BM25_B,
-    LIMIT
+    DEFAULT_SEARCH_LIMIT
 )
 
 
@@ -61,7 +61,7 @@ def main() -> None:
 
     bm25search_parser = subparsers.add_parser("bm25search", help="Search movies using full BM25 scoring")
     bm25search_parser.add_argument("query", type=str, help="Search query")
-    bm25search_parser.add_argument("limit", type=int, nargs="?", default=LIMIT, help="Number of documents to return [default=5]")
+    bm25search_parser.add_argument("limit", type=int, nargs="?", default=DEFAULT_SEARCH_LIMIT, help="Number of documents to return [default=5]")
     
     args = parser.parse_args()
 
