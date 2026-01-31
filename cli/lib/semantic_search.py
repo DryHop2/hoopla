@@ -317,7 +317,7 @@ class ChunkedSemanticSearch(SemanticSearch):
                 "id": doc["id"],
                 "title": doc["title"],
                 "document": description[:100],
-                "score": round(score, SCORE_PRECISION),
+                "score": float(score),
                 "metadata": metadata,
             })
 
